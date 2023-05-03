@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import os
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
-
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -15,6 +17,9 @@ class ImageViewer(tk.Tk):
         self.zoom_factor = 1.0
         self.zoom_factors = [0.25, 0.5, 1.0, 1.5,
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+        
+        self.file_path = None
+        self.file_observer = None
 
         self.create_widgets()
 
@@ -49,11 +54,31 @@ class ImageViewer(tk.Tk):
         self.label.bind("<MouseWheel>", self.on_mouse_wheel)
 
     def open_file(self):
-        file_name = filedialog.askopenfilename(
-            filetypes=[("PNG Files", "*.png")])
+        file_name = filedialog.askopenfilename(filetypes=[("PNG Files", "*.png")])
 
         if file_name:
+            self.file_path = file_name
             self.original_image = Image.open(file_name)
+            self.display_image()
+            self.watch_file()
+
+    def watch_file(self):
+        if self.file_observer is not None:
+            self.file_observer.stop()
+
+        event_handler = FileSystemEventHandler()
+        event_handler.on_modified = self.on_file_modified
+
+        self.file_observer = Observer()
+        self.file_observer.schedule(event_handler, os.path.dirname(self.file_path), recursive=False)
+        self.file_observer.start()
+
+    def on_file_modified(self, event):
+        modified_file_path = os.path.join(event.src_path, os.path.basename(self.file_path))
+        print(event)
+        print(modified_file_path, " =? ", self.file_path)
+        if os.path.abspath(modified_file_path) == os.path.abspath(self.file_path):
+            self.original_image = Image.open(self.file_path)
             self.display_image()
 
     def display_image(self):
