@@ -18,6 +18,20 @@ def build_color_list_from_image(img):
         return colors
 
 
+def pre_dither_image(img, luma_amplitude=0.05):
+    img_data = np.array(img)
+    h, w, _ = img_data.shape
+
+    for y in range(h):
+        for x in range(w):
+            if (x + y) % 2 == 0:
+                img_data[y, x] = np.clip(img_data[y, x] * (1.0 - luma_amplitude), 0, 255)
+            else:
+                img_data[y, x] = np.clip(img_data[y, x] * (1.0 + luma_amplitude), 0, 255)
+
+    return Image.fromarray(img_data.astype('uint8'))
+
+
 def quantize_colors(colors, n_colors=16):
     # Convertir les couleurs 8 bits en valeurs de 0 à 1
     colors = np.array(colors, dtype=np.float64) / 255

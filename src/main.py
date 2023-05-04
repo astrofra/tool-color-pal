@@ -6,7 +6,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors
+from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, pre_dither_image
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -52,7 +52,7 @@ class ImageViewer(tk.Tk):
         self.label = tk.Label(self)
         self.label.pack(expand=True, padx=20, pady=20)
 
-        self.calculate_palette_button = tk.Button(self, text="Calculate Palette", command=self.calculate_palette)
+        self.calculate_palette_button = tk.Button(control_frame, text="Convert", command=self.calculate_palette)
         self.calculate_palette_button.pack(side="bottom")
 
         # Bind mouse wheel event
@@ -63,7 +63,8 @@ class ImageViewer(tk.Tk):
         if self.original_image is not None:
             original_palette = build_color_list_from_image(self.original_image)
             reduced_palette = quantize_colors(original_palette, 16)
-            self.original_image = png_24bit_to_indexed(self.original_image, reduced_palette)
+            self.original_image = png_24bit_to_indexed(pre_dither_image(self.original_image, 0.05), reduced_palette)
+            # self.original_image = pre_dither_image(self.original_image)
             self.display_image()
 
 
@@ -140,6 +141,64 @@ class ImageViewer(tk.Tk):
             self.zoom_in()
         else:
             self.zoom_out()
+
+
+# class ToolTip:
+#     def __init__(self, widget):
+#         self.widget = widget
+#         self.tip_window = None
+
+#     def show(self, text, x, y):
+#         self.tip_window = tw = tk.Toplevel(self.widget)
+#         tw.wm_overrideredirect(True)  # Supprime la barre de titre
+#         tw.wm_geometry(f"+{x}+{y}")  # Positionne l'infobulle
+
+#         label = tk.Label(tw, text=text, bg="white", relief="solid", borderwidth=1)
+#         label.pack()
+
+#     def hide(self):
+#         if self.tip_window:
+#             self.tip_window.destroy()
+#             self.tip_window = None
+
+# def on_color_hover(event, tooltip, colors):
+#     i = event.x // 16
+#     color = colors[i]
+#     tooltip.show(f"RGB: {color}", event.x_root + 20, event.y_root + 20)
+
+# def on_color_leave(event, tooltip):
+#     tooltip.hide()
+
+# def display_palette(colors):
+#     root = tk.Tk()
+#     root.title("Palette de couleurs")
+
+#     canvas = tk.Canvas(root, width=16 * len(colors), height=16, bg="white")
+#     canvas.pack()
+
+#     for i, color in enumerate(colors):
+#         canvas.create_rectangle(
+#             i * 16, 0, (i + 1) * 16, 16,
+#             outline="black",
+#             fill="#%02x%02x%02x" % tuple(color)
+#         )
+
+#     tooltip = ToolTip(root)
+
+#     canvas.bind("<Motion>", lambda event: on_color_hover(event, tooltip, colors))
+#     canvas.bind("<Leave>", lambda event: on_color_leave(event, tooltip))
+
+#     root.mainloop()
+
+# # Exemple d'utilisation
+# colors = [
+#     [255, 0, 0], [0, 255, 0], [0, 0, 255],
+#     # Ajoutez plus de couleurs RGB (8 bits par composante) ici
+# ]
+
+# quantized_colors = quantize_colors(colors)
+# display_palette(quantized_colors)
+
 
 
 if __name__ == "__main__":
