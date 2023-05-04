@@ -6,7 +6,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, pre_dither_image
+from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, pre_dither_image, apply_trame_overlay
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -63,7 +63,8 @@ class ImageViewer(tk.Tk):
         if self.original_image is not None:
             original_palette = build_color_list_from_image(self.original_image)
             reduced_palette = quantize_colors(original_palette, 16)
-            self.original_image = png_24bit_to_indexed(pre_dither_image(self.original_image, 0.05), reduced_palette)
+            dithered_img = apply_trame_overlay(self.original_image, 0.05)
+            self.original_image = png_24bit_to_indexed(dithered_img, reduced_palette)
             # self.original_image = pre_dither_image(self.original_image)
             self.display_image()
 

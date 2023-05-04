@@ -32,6 +32,27 @@ def pre_dither_image(img, luma_amplitude=0.05):
     return Image.fromarray(img_data.astype('uint8'))
 
 
+def overlay_formula(a, b):
+    return np.where(a <= 0.5, 2 * a * b, 1 - 2 * (1 - a) * (1 - b))
+
+
+def apply_trame_overlay(img, luma_amplitude=0.05):
+    img_data = np.array(img, dtype=np.float32) / 255
+    h, w, _ = img_data.shape
+
+    overlay_color_even = np.array([(1.0 - luma_amplitude) / 2.0] * 3, dtype=np.float32)
+    overlay_color_odd = np.array([(1.0 + luma_amplitude) / 2.0] * 3, dtype=np.float32)
+
+    for y in range(h):
+        for x in range(w):
+            if (x + y) % 2 == 0:
+                img_data[y, x] = overlay_formula(img_data[y, x], overlay_color_even)
+            else:
+                img_data[y, x] = overlay_formula(img_data[y, x], overlay_color_odd)
+
+    return Image.fromarray(np.uint8(img_data * 255))
+
+
 def quantize_colors(colors, n_colors=16):
     # Convertir les couleurs 8 bits en valeurs de 0 à 1
     colors = np.array(colors, dtype=np.float64) / 255
