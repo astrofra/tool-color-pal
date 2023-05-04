@@ -1,5 +1,22 @@
 import numpy as np
 from sklearn.cluster import KMeans
+from PIL import Image
+
+
+def build_color_list_from_image(img):
+    if img is not None:
+        colors = []
+        for y in range(img.height):
+            for x in range(img.width):
+                color = img.getpixel((x, y))
+                r = (color[0] // 16) * 16
+                g = (color[1] // 16) * 16
+                b = (color[2] // 16) * 16
+                colors.append([r, g, b])
+
+        print("True Color Palette: " + str(len(colors)) + " colors found.")
+        return colors
+
 
 def quantize_colors(colors, n_colors=16):
     # Convertir les couleurs 8 bits en valeurs de 0 à 1
@@ -17,11 +34,30 @@ def quantize_colors(colors, n_colors=16):
 
     return representative_colors_4bit.tolist()
 
-# # Exemple d'utilisation
-# colors = [
-#     [255, 0, 0], [0, 255, 0], [0, 0, 255],
-#     # Ajoutez plus de couleurs RGB (8 bits par composante) ici
-# ]
 
-# result = quantize_colors(colors)
-# print(result)
+def png_24bit_to_indexed(input_img, representative_colors):
+    img = input_img
+
+    # Extraire les données de couleur de l'image
+    img_data = np.array(img)
+    colors = img_data.reshape(-1, 3).tolist()
+
+    # Quantifier les couleurs
+    # representative_colors = quantize_colors(colors, n_colors)
+
+    # Créer un dictionnaire pour mapper les couleurs vers leurs indices
+    color_to_index = {tuple(color): idx for idx, color in enumerate(representative_colors)}
+
+    # Créer une image indexée avec la palette de couleurs quantisées
+    indexed_img = Image.new("P", img.size)
+    indexed_img.putpalette([item for sublist in representative_colors for item in sublist])
+
+    # Remplir l'image indexée avec les indices de couleur appropriés
+    for y in range(img_data.shape[0]):
+        for x in range(img_data.shape[1]):
+            color = tuple(img_data[y, x])
+            closest_color = min(representative_colors, key=lambda c: sum((c_i - color_i) ** 2 for c_i, color_i in zip(c, color)))
+            indexed_img.putpixel((x, y), color_to_index[tuple(closest_color)])
+
+    # Sauvegarder l'image indexée en tant que nouveau fichier PNG
+    return indexed_img

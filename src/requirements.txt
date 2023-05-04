@@ -1,4 +1,4 @@
 pillow
 watchdog
-sklearn
+scikit-learn
 numpy

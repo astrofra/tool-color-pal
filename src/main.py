@@ -6,7 +6,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import quantize_colors
+from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -58,25 +58,16 @@ class ImageViewer(tk.Tk):
         # Bind mouse wheel event
         self.label.bind("<MouseWheel>", self.on_mouse_wheel)
 
+
     def calculate_palette(self):
         if self.original_image is not None:
-            colors = []
-            for y in range(self.original_image.height):
-                for x in range(self.original_image.width):
-                    color = self.original_image.getpixel((x, y))
-                    r = (color[0] // 16) * 16
-                    g = (color[1] // 16) * 16
-                    b = (color[2] // 16) * 16
-                    colors.append([r, g, b])
-
-            print("True Color Palette: " + str(len(colors)) + " colors found.")
-            for color in colors:
-                print(color)
-
-            reduced_palette = quantize_colors(colors)
+            original_palette = build_color_list_from_image(self.original_image)
+            reduced_palette = quantize_colors(original_palette, 16)
+            self.original_image = png_24bit_to_indexed(self.original_image, reduced_palette)
+            self.display_image()
 
 
-    def open_file(self, _):
+    def open_file(self, a=None):
         file_name = filedialog.askopenfilename(filetypes=[("PNG Files", "*.png")])
 
         if file_name:
@@ -84,6 +75,7 @@ class ImageViewer(tk.Tk):
             self.original_image = Image.open(file_name)
             self.display_image()
             self.watch_file()
+
 
     def watch_file(self):
         if self.file_observer is not None:
@@ -96,6 +88,7 @@ class ImageViewer(tk.Tk):
         self.file_observer.schedule(event_handler, os.path.dirname(self.file_path), recursive=False)
         self.file_observer.start()
 
+
     def on_file_modified(self, event):
         modified_file_path = os.path.join(event.src_path, os.path.basename(self.file_path))
         print(event)
@@ -103,6 +96,7 @@ class ImageViewer(tk.Tk):
         if os.path.abspath(modified_file_path) == os.path.abspath(self.file_path):
             self.original_image = Image.open(self.file_path)
             self.display_image()
+
 
     def display_image(self):
         if self.zoom_factor > 1.0:
@@ -120,8 +114,10 @@ class ImageViewer(tk.Tk):
         self.label.config(image=tk_image)
         self.label.image = tk_image
 
+
     def update_zoom_label(self):
         self.zoom_label.config(text=f"{self.zoom_factor * 100:.0f}%")
+
 
     def zoom_in(self):
         if self.zoom_factor < self.zoom_factors[-1]:
@@ -130,12 +126,14 @@ class ImageViewer(tk.Tk):
             self.display_image()
             self.update_zoom_label()
 
+
     def zoom_out(self):
         if self.zoom_factor > self.zoom_factors[0]:
             current_index = self.zoom_factors.index(self.zoom_factor)
             self.zoom_factor = self.zoom_factors[current_index - 1]
             self.display_image()
             self.update_zoom_label()
+
 
     def on_mouse_wheel(self, event):
         if event.delta > 0:
