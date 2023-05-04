@@ -6,9 +6,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from functools import partial
-
-import quantize
+from quantize import quantize_colors
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -74,6 +72,8 @@ class ImageViewer(tk.Tk):
             print("True Color Palette: " + str(len(colors)) + " colors found.")
             for color in colors:
                 print(color)
+
+            reduced_palette = quantize_colors(colors)
 
 
     def open_file(self, _):
