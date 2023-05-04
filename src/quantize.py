@@ -3,6 +3,13 @@ from sklearn.cluster import KMeans
 from PIL import Image
 
 
+def sort_palette_by_luminance(palette):
+    def luminance(color):
+        r, g, b = color
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+    return sorted(palette, key=luminance)
+
 def build_color_list_from_image(img):
     if img is not None:
         colors = []
@@ -37,7 +44,9 @@ def overlay_formula(a, b):
 
 
 def apply_trame_overlay(img, luma_amplitude=0.05):
-    img_data = np.array(img, dtype=np.float32) / 255
+    img_rgb = img.convert("RGB")  # Convertir l'image en RGB
+    img_data = np.array(img_rgb, dtype=np.float32) / 255
+    # img_data = np.array(img, dtype=np.float32) / 255
     h, w, _ = img_data.shape
 
     overlay_color_even = np.array([(1.0 - luma_amplitude) / 2.0] * 3, dtype=np.float32)

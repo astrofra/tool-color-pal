@@ -6,7 +6,7 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, pre_dither_image, apply_trame_overlay
+from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, pre_dither_image, apply_trame_overlay, sort_palette_by_luminance
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -33,6 +33,9 @@ class ImageViewer(tk.Tk):
 
         file_menu.add_command(label="Open image", command=self.open_file, accelerator="Ctrl+O")
         self.bind_all("<Control-o>", self.open_file)
+
+        file_menu.add_command(label="Save image", command=self.save_file, accelerator="Ctrl+S")
+        self.bind_all("<Control-s>", self.save_file)
 
         control_frame = tk.Frame(self)
         control_frame.pack(side=tk.BOTTOM, pady=10)
@@ -62,9 +65,11 @@ class ImageViewer(tk.Tk):
     def calculate_palette(self):
         if self.original_image is not None:
             original_palette = build_color_list_from_image(self.original_image)
-            reduced_palette = quantize_colors(original_palette, 16)
+            unsorted_reduced_palette = quantize_colors(original_palette, 16)
+            reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
             dithered_img = apply_trame_overlay(self.original_image, 0.05)
             self.original_image = png_24bit_to_indexed(dithered_img, reduced_palette)
+            display_palette(reduced_palette)
             # self.original_image = pre_dither_image(self.original_image)
             self.display_image()
 
@@ -77,6 +82,12 @@ class ImageViewer(tk.Tk):
             self.original_image = Image.open(file_name)
             self.display_image()
             self.watch_file()
+
+
+    def save_file(self, a=None):
+        file_path = filedialog.asksaveasfilename(defaultextension=".png")
+        if file_path:
+            self.original_image.save(file_path, "PNG")
 
 
     def watch_file(self):
@@ -170,19 +181,19 @@ class ImageViewer(tk.Tk):
 # def on_color_leave(event, tooltip):
 #     tooltip.hide()
 
-# def display_palette(colors):
-#     root = tk.Tk()
-#     root.title("Palette de couleurs")
+def display_palette(colors):
+    root = tk.Tk()
+    root.title("Palette de couleurs")
 
-#     canvas = tk.Canvas(root, width=16 * len(colors), height=16, bg="white")
-#     canvas.pack()
+    canvas = tk.Canvas(root, width=16 * len(colors), height=16, bg="white")
+    canvas.pack()
 
-#     for i, color in enumerate(colors):
-#         canvas.create_rectangle(
-#             i * 16, 0, (i + 1) * 16, 16,
-#             outline="black",
-#             fill="#%02x%02x%02x" % tuple(color)
-#         )
+    for i, color in enumerate(colors):
+        canvas.create_rectangle(
+            i * 16, 0, (i + 1) * 16, 16,
+            outline="black",
+            fill="#%02x%02x%02x" % tuple(color)
+        )
 
 #     tooltip = ToolTip(root)
 
