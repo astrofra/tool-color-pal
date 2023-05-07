@@ -40,23 +40,26 @@ class ImageViewer(tk.Tk):
         control_frame = tk.Frame(self)
         control_frame.pack(side=tk.BOTTOM, pady=10)
 
-        zoom_in_button = tk.Button(
-            control_frame, text="+", command=self.zoom_in)
-        zoom_in_button.pack(side=tk.LEFT)
+        zoom_out_button = tk.Button(
+            control_frame, text="-", command=self.zoom_out)
+        zoom_out_button.pack(side=tk.LEFT)
 
         self.zoom_label = tk.Label(
             control_frame, text=f"{self.zoom_factor * 100:.0f}%")
         self.zoom_label.pack(side=tk.LEFT, padx=5)
 
-        zoom_out_button = tk.Button(
-            control_frame, text="-", command=self.zoom_out)
-        zoom_out_button.pack(side=tk.LEFT)
+        zoom_in_button = tk.Button(
+            control_frame, text="+", command=self.zoom_in)
+        zoom_in_button.pack(side=tk.LEFT)
 
         self.label = tk.Label(self)
         self.label.pack(expand=True, padx=20, pady=20)
 
+        separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
+        separator.pack(side=tk.LEFT, padx=5, pady=5)
+
         self.calculate_palette_button = tk.Button(control_frame, text="Convert", command=self.calculate_palette)
-        self.calculate_palette_button.pack(side="bottom")
+        self.calculate_palette_button.pack(side=tk.BOTTOM)
 
         # Bind mouse wheel event
         self.label.bind("<MouseWheel>", self.on_mouse_wheel)
