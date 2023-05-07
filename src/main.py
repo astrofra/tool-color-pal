@@ -13,16 +13,20 @@ class ImageViewer(tk.Tk):
         super().__init__()
 
         self.title("Image Viewer")
-        self.geometry("800x600")
+        self.geometry("1024x760")
 
         self.palette_size = 16
 
-        self.zoom_factor = 2.0
+        self.dither_intensity = 0.05
+
+        self.zoom_factor = 3.0
         self.zoom_factors = [0.25, 0.5, 1.0, 1.5,
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
         
         self.file_path = None
         self.file_observer = None
+        self.original_image = None
+        self.converted_image = None
 
         self.create_widgets()
 
@@ -78,6 +82,26 @@ class ImageViewer(tk.Tk):
         separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
         separator.pack(side=tk.LEFT, padx=5, pady=5)
 
+        # Dither intensity
+        dither_dec_button = tk.Button(
+            control_frame, text="-", command=self.dither_dec)
+        dither_dec_button.pack(side=tk.LEFT)
+
+        self.dither_label = tk.Label(
+            control_frame, text=f"{self.dither_intensity:.2f}")
+        self.dither_label.pack(side=tk.LEFT, padx=5)
+
+        dither_inc_button = tk.Button(
+            control_frame, text="+", command=self.dither_inc)
+        dither_inc_button.pack(side=tk.LEFT)
+
+        self.label = tk.Label(self)
+        self.label.pack(expand=True, padx=20, pady=20)
+
+        # Separator
+        separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
+        separator.pack(side=tk.LEFT, padx=5, pady=5)
+
         # Convert
         self.calculate_palette_button = tk.Button(control_frame, text="Convert", command=self.calculate_palette)
         self.calculate_palette_button.pack(side=tk.BOTTOM)
@@ -97,19 +121,22 @@ class ImageViewer(tk.Tk):
 
     def calculate_palette(self):
         if self.original_image is not None:
-            original_palette = build_color_list_from_image(self.original_image, self.update_progress_bar, 0, 10)
-
-            self.update_progress_bar(20)
-            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size)
+            original_palette = build_color_list_from_image(self.original_image, self.update_progress_bar, 0, 20)
 
             self.update_progress_bar(30)
+            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size)
+
+            self.update_progress_bar(40)
             reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
 
-            dithered_img = apply_trame_overlay(self.original_image, 0.05, self.update_progress_bar, 40, 50)
+            if self.dither_intensity > 0.0:
+                pre_processed_img = apply_trame_overlay(self.original_image, self.dither_intensity, self.update_progress_bar, 50, 60)
+            else:
+                pre_processed_img = self.original_image
 
-            self.original_image = png_24bit_to_indexed(dithered_img, reduced_palette, self.update_progress_bar, 50, 60)
+            self.converted_image = png_24bit_to_indexed(pre_processed_img, reduced_palette, self.update_progress_bar, 60, 80)
 
-            self.update_progress_bar(80)
+            self.update_progress_bar(90)
             display_palette(reduced_palette)
 
             self.update_progress_bar(100)
@@ -154,14 +181,20 @@ class ImageViewer(tk.Tk):
 
 
     def display_image(self):
+        displayed_image = None
+        if self.converted_image is not None:
+            displayed_image = self.converted_image
+        else:
+            displayed_image = self.original_image
+
         if self.zoom_factor > 1.0:
             resample_method = Image.NEAREST
         else:
             resample_method = Image.ANTIALIAS
 
-        image = self.original_image.resize(
-            (int(self.original_image.width * self.zoom_factor),
-             int(self.original_image.height * self.zoom_factor)),
+        image = displayed_image.resize(
+            (int(displayed_image.width * self.zoom_factor),
+             int(displayed_image.height * self.zoom_factor)),
             resample=resample_method,
         )
         tk_image = ImageTk.PhotoImage(image)
@@ -208,6 +241,22 @@ class ImageViewer(tk.Tk):
         if self.zoom_factor > 0:
             self.palette_size -= 1
             self.update_palette_size_label()
+
+    # Dither intensity
+    def update_dither_label(self):
+        self.dither_label.config(text=f"{self.dither_intensity:.2f}")
+
+
+    def dither_inc(self):
+        if self.dither_intensity < 1.0:
+            self.dither_intensity += 0.05
+            self.update_dither_label()
+
+
+    def dither_dec(self):
+        if self.dither_intensity > 0.0:
+            self.dither_intensity -= 0.05
+            self.update_dither_label()
 
 
     def on_mouse_wheel(self, event):
