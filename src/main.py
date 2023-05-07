@@ -15,6 +15,8 @@ class ImageViewer(tk.Tk):
         self.title("Image Viewer")
         self.geometry("800x600")
 
+        self.palette_size = 16
+
         self.zoom_factor = 2.0
         self.zoom_factors = [0.25, 0.5, 1.0, 1.5,
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
@@ -58,6 +60,21 @@ class ImageViewer(tk.Tk):
         self.label = tk.Label(self)
         self.label.pack(expand=True, padx=20, pady=20)
 
+        # Separator
+        separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
+        separator.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Palette size
+        palette_size_dec_button = tk.Button(control_frame, text="-", command=self.palette_size_dec)
+        palette_size_dec_button.pack(side=tk.LEFT)
+
+        self.palette_size_label = tk.Label(control_frame, text=f"{self.palette_size:2d} colors")
+        self.palette_size_label.pack(side=tk.LEFT, padx=5)
+
+        palette_size_inc_button = tk.Button(control_frame, text="+", command=self.palette_size_inc)
+        palette_size_inc_button.pack(side=tk.LEFT)
+
+        # Separator
         separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
         separator.pack(side=tk.LEFT, padx=5, pady=5)
 
@@ -83,7 +100,7 @@ class ImageViewer(tk.Tk):
             original_palette = build_color_list_from_image(self.original_image, self.update_progress_bar, 0, 10)
 
             self.update_progress_bar(20)
-            unsorted_reduced_palette = quantize_colors(original_palette, 16)
+            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size)
 
             self.update_progress_bar(30)
             reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
@@ -171,6 +188,26 @@ class ImageViewer(tk.Tk):
             self.zoom_factor = self.zoom_factors[current_index - 1]
             self.display_image()
             self.update_zoom_label()
+
+
+    def update_zoom_label(self):
+        self.zoom_label.config(text=f"{self.zoom_factor * 100:.0f}%")
+
+
+    # Palette size
+    def update_palette_size_label(self):
+        self.palette_size_label.config(text=f"{self.palette_size:2d} colors")
+
+    def palette_size_inc(self):
+        if self.palette_size < 256:
+            self.palette_size += 1
+            self.update_palette_size_label()
+
+
+    def palette_size_dec(self):
+        if self.zoom_factor > 0:
+            self.palette_size -= 1
+            self.update_palette_size_label()
 
 
     def on_mouse_wheel(self, event):
