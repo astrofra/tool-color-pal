@@ -2,7 +2,7 @@
 
 import os
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -15,7 +15,7 @@ class ImageViewer(tk.Tk):
         self.title("Image Viewer")
         self.geometry("800x600")
 
-        self.zoom_factor = 1.0
+        self.zoom_factor = 2.0
         self.zoom_factors = [0.25, 0.5, 1.0, 1.5,
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
         
@@ -25,6 +25,7 @@ class ImageViewer(tk.Tk):
         self.create_widgets()
 
     def create_widgets(self):
+        # Main menu
         menubar = tk.Menu(self)
         self.config(menu=menubar)
 
@@ -37,9 +38,11 @@ class ImageViewer(tk.Tk):
         file_menu.add_command(label="Save image", command=self.save_file, accelerator="Ctrl+S")
         self.bind_all("<Control-s>", self.save_file)
 
+        # Operations
         control_frame = tk.Frame(self)
         control_frame.pack(side=tk.BOTTOM, pady=10)
 
+        # Zoom In/Out
         zoom_out_button = tk.Button(
             control_frame, text="-", command=self.zoom_out)
         zoom_out_button.pack(side=tk.LEFT)
@@ -58,22 +61,41 @@ class ImageViewer(tk.Tk):
         separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
         separator.pack(side=tk.LEFT, padx=5, pady=5)
 
+        # Convert
         self.calculate_palette_button = tk.Button(control_frame, text="Convert", command=self.calculate_palette)
         self.calculate_palette_button.pack(side=tk.BOTTOM)
+
+        # Ajouter la barre de progression
+        self.progress = ttk.Progressbar(self, mode="determinate", length=300)
+        self.progress.pack(side=tk.BOTTOM, pady=5)
 
         # Bind mouse wheel event
         self.label.bind("<MouseWheel>", self.on_mouse_wheel)
 
+    
+    def update_progress_bar(self, v):
+        self.progress["value"] = v
+        self.progress.update()
+
 
     def calculate_palette(self):
         if self.original_image is not None:
-            original_palette = build_color_list_from_image(self.original_image)
+            original_palette = build_color_list_from_image(self.original_image, self.update_progress_bar, 0, 10)
+
+            self.update_progress_bar(20)
             unsorted_reduced_palette = quantize_colors(original_palette, 16)
+
+            self.update_progress_bar(30)
             reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
-            dithered_img = apply_trame_overlay(self.original_image, 0.05)
-            self.original_image = png_24bit_to_indexed(dithered_img, reduced_palette)
+
+            dithered_img = apply_trame_overlay(self.original_image, 0.05, self.update_progress_bar, 40, 50)
+
+            self.original_image = png_24bit_to_indexed(dithered_img, reduced_palette, self.update_progress_bar, 50, 60)
+
+            self.update_progress_bar(80)
             display_palette(reduced_palette)
-            # self.original_image = pre_dither_image(self.original_image)
+
+            self.update_progress_bar(100)
             self.display_image()
 
 

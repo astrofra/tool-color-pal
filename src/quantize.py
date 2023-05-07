@@ -3,6 +3,14 @@ from sklearn.cluster import KMeans
 from PIL import Image
 
 
+def progress_callback_stub(v,a,b,c,d):
+    pass
+
+def remap(value, a, b, c, d):
+    ratio = (d - c) / (b - a)
+    return c + (value - a) * ratio
+
+
 def sort_palette_by_luminance(palette):
     def luminance(color):
         r, g, b = color
@@ -10,10 +18,11 @@ def sort_palette_by_luminance(palette):
 
     return sorted(palette, key=luminance)
 
-def build_color_list_from_image(img):
+def build_color_list_from_image(img, progress_callback=progress_callback_stub, pb_min=0, pb_max=100):
     if img is not None:
         colors = []
         for y in range(img.height):
+            progress_callback(remap(y / img.height, 0.0, 1.0, pb_min, pb_max))
             for x in range(img.width):
                 color = img.getpixel((x, y))
                 r = (color[0] // 16) * 16
@@ -25,11 +34,12 @@ def build_color_list_from_image(img):
         return colors
 
 
-def pre_dither_image(img, luma_amplitude=0.05):
+def pre_dither_image(img, luma_amplitude=0.05, progress_callback=progress_callback_stub, pb_min=0, pb_max=100):
     img_data = np.array(img)
     h, w, _ = img_data.shape
 
     for y in range(h):
+        progress_callback(remap(y / h, 0.0, 1.0, pb_min, pb_max))
         for x in range(w):
             if (x + y) % 2 == 0:
                 img_data[y, x] = np.clip(img_data[y, x] * (1.0 - luma_amplitude), 0, 255)
@@ -43,7 +53,7 @@ def overlay_formula(a, b):
     return np.where(a <= 0.5, 2 * a * b, 1 - 2 * (1 - a) * (1 - b))
 
 
-def apply_trame_overlay(img, luma_amplitude=0.05):
+def apply_trame_overlay(img, luma_amplitude=0.05, progress_callback=progress_callback_stub, pb_min=0, pb_max=100):
     img_rgb = img.convert("RGB")  # Convertir l'image en RGB
     img_data = np.array(img_rgb, dtype=np.float32) / 255
     # img_data = np.array(img, dtype=np.float32) / 255
@@ -53,6 +63,7 @@ def apply_trame_overlay(img, luma_amplitude=0.05):
     overlay_color_odd = np.array([(1.0 + luma_amplitude) / 2.0] * 3, dtype=np.float32)
 
     for y in range(h):
+        progress_callback(remap(y / h, 0.0, 1.0, pb_min, pb_max))
         for x in range(w):
             if (x + y) % 2 == 0:
                 img_data[y, x] = overlay_formula(img_data[y, x], overlay_color_even)
@@ -79,7 +90,7 @@ def quantize_colors(colors, n_colors=16):
     return representative_colors_4bit.tolist()
 
 
-def png_24bit_to_indexed(input_img, representative_colors):
+def png_24bit_to_indexed(input_img, representative_colors, progress_callback=progress_callback_stub, pb_min=0, pb_max=100):
     img = input_img
 
     # Extraire les données de couleur de l'image
@@ -98,6 +109,7 @@ def png_24bit_to_indexed(input_img, representative_colors):
 
     # Remplir l'image indexée avec les indices de couleur appropriés
     for y in range(img_data.shape[0]):
+        progress_callback(remap(y / img_data.shape[0], 0.0, 1.0, pb_min, pb_max))
         for x in range(img_data.shape[1]):
             color = tuple(img_data[y, x])
             closest_color = min(representative_colors, key=lambda c: sum((c_i - color_i) ** 2 for c_i, color_i in zip(c, color)))
