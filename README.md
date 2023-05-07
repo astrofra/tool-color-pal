@@ -1,10 +1,13 @@
-# tool-color-pal
-ColorPal, your pal to create RGB indexed color palettes
+# ColorPal
 
-## Install packages
+Your pal to create RGB indexed color palettes
 
-### sklearn
+## How to run ColorPal ?
 
 ```bash
-pip install -U scikit-learn
+git clone https://github.com/astrofra/tool-color-pal.git
+cd tool-color-pal
+cd src
+pip install -r requirements.txt
+python3 main.py
 ```
