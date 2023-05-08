@@ -23,6 +23,9 @@ class ImageViewer(tk.Tk):
         self.zoom_factors = [0.25, 0.5, 1.0, 1.5,
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
         
+        self.conversion_mode = tk.StringVar(value="Kmeans")
+        self.mode_options = ["Kmeans", "Median Cut", "Popularity"]
+        
         self.file_path = None
         self.file_observer = None
         self.original_image = None
@@ -102,6 +105,13 @@ class ImageViewer(tk.Tk):
         separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
         separator.pack(side=tk.LEFT, padx=5, pady=5)
 
+        self.mode_selector = ttk.Combobox(control_frame, values=self.mode_options, textvariable=self.conversion_mode)
+        self.mode_selector.pack(side=tk.LEFT, padx=5)
+
+        # Separator
+        separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
+        separator.pack(side=tk.LEFT, padx=5, pady=5)
+
         # Convert
         self.calculate_palette_button = tk.Button(control_frame, text="Convert", command=self.calculate_palette)
         self.calculate_palette_button.pack(side=tk.BOTTOM)
@@ -124,6 +134,7 @@ class ImageViewer(tk.Tk):
             original_palette = build_color_list_from_image(self.original_image, self.update_progress_bar, 0, 20)
 
             self.update_progress_bar(30)
+            print(self.conversion_mode)
             unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size)
 
             self.update_progress_bar(40)

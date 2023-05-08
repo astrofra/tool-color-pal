@@ -25,10 +25,12 @@ def build_color_list_from_image(img, progress_callback=progress_callback_stub, p
             progress_callback(remap(y / img.height, 0.0, 1.0, pb_min, pb_max))
             for x in range(img.width):
                 color = img.getpixel((x, y))
-                r = (color[0] // 16) * 16
-                g = (color[1] // 16) * 16
-                b = (color[2] // 16) * 16
-                colors.append([r, g, b])
+                # r = (color[0] // 16) * 16
+                # g = (color[1] // 16) * 16
+                # b = (color[2] // 16) * 16
+                # if not([r, g, b] in colors):
+                #     colors.append([r, g, b])
+                colors.append([color[0], color[1], color[2]])
 
         print("True Color Palette: " + str(len(colors)) + " colors found.")
         return colors
@@ -74,20 +76,40 @@ def apply_trame_overlay(img, luma_amplitude=0.05, progress_callback=progress_cal
 
 
 def quantize_colors(colors, n_colors=16):
-    # Convertir les couleurs 8 bits en valeurs de 0 à 1
+    # # Convertir les couleurs 8 bits en valeurs de 0 à 1
+    # colors = np.array(colors, dtype=np.float64) / 255
+
+    # # Appliquer l'algorithme de k-means
+    # kmeans = KMeans(n_clusters=n_colors, random_state=42).fit(colors)
+
+    # # Obtenir les couleurs représentatives
+    # representative_colors = kmeans.cluster_centers_ * 255
+
+    # # Convertir les couleurs représentatives en 4 bits par composante
+    # # representative_colors_4bit = np.round(representative_colors / 17) * 17
+    # representative_colors_4bit = representative_colors
+    # representative_colors_4bit = representative_colors_4bit.astype(int)
+
+    # return representative_colors_4bit.tolist()
+
     colors = np.array(colors, dtype=np.float64) / 255
+    requested_colors = n_colors
 
-    # Appliquer l'algorithme de k-means
-    kmeans = KMeans(n_clusters=n_colors, random_state=42).fit(colors)
+    representative_colors = []
+    while len(representative_colors) < n_colors:
+        print("requested_colors = " + str(requested_colors))
+        kmeans = KMeans(n_clusters=requested_colors, random_state=42).fit(colors)
+        representative_colors = kmeans.cluster_centers_ * 255
+        representative_colors = np.round(representative_colors / 17) * 17
+        representative_colors = representative_colors
+        representative_colors = representative_colors.astype(int)
+        representative_colors = np.unique(representative_colors, axis=0)
+        representative_colors = representative_colors.tolist()
 
-    # Obtenir les couleurs représentatives
-    representative_colors = kmeans.cluster_centers_ * 255
+        requested_colors += 1
+    
+    return representative_colors
 
-    # Convertir les couleurs représentatives en 4 bits par composante
-    representative_colors_4bit = np.round(representative_colors / 17) * 17
-    representative_colors_4bit = representative_colors_4bit.astype(int)
-
-    return representative_colors_4bit.tolist()
 
 
 def png_24bit_to_indexed(input_img, representative_colors, progress_callback=progress_callback_stub, pb_min=0, pb_max=100):
