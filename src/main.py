@@ -6,7 +6,7 @@ from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, pre_dither_image, apply_trame_overlay, sort_palette_by_luminance
+from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, apply_dither_overlay, sort_palette_by_luminance
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -141,7 +141,7 @@ class ImageViewer(tk.Tk):
             reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
 
             if self.dither_intensity > 0.0:
-                pre_processed_img = apply_trame_overlay(self.original_image, self.dither_intensity, self.update_progress_bar, 50, 60)
+                pre_processed_img = apply_dither_overlay(self.original_image, self.dither_intensity, self.update_progress_bar, 50, 60)
             else:
                 pre_processed_img = self.original_image
 
@@ -255,18 +255,18 @@ class ImageViewer(tk.Tk):
 
     # Dither intensity
     def update_dither_label(self):
-        self.dither_label.config(text=f"{self.dither_intensity:.2f}")
+        self.dither_label.config(text=f"{self.dither_intensity:.3f}")
 
 
     def dither_inc(self):
         if self.dither_intensity < 1.0:
-            self.dither_intensity += 0.05
+            self.dither_intensity += 0.025
             self.update_dither_label()
 
 
     def dither_dec(self):
         if self.dither_intensity > 0.0:
-            self.dither_intensity -= 0.05
+            self.dither_intensity -= 0.025
             self.update_dither_label()
 
 
