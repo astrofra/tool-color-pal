@@ -23,6 +23,8 @@ class ImageViewer(tk.Tk):
         self.zoom_factors = [0.25, 0.5, 1.0, 1.5,
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
         
+        self.palette_root = None
+        
         self.conversion_mode = tk.StringVar(value="Kmeans")
         self.mode_options = ["Kmeans", "Median Cut", "Popularity"]
         
@@ -148,7 +150,7 @@ class ImageViewer(tk.Tk):
             self.converted_image = png_24bit_to_indexed(pre_processed_img, reduced_palette, self.update_progress_bar, 60, 80)
 
             self.update_progress_bar(90)
-            display_palette(reduced_palette)
+            self.palette_root = display_palette(self.palette_root, reduced_palette)
 
             self.update_progress_bar(100)
             self.display_image()
@@ -166,8 +168,8 @@ class ImageViewer(tk.Tk):
 
     def save_file(self, a=None):
         file_path = filedialog.asksaveasfilename(defaultextension=".png")
-        if file_path:
-            self.original_image.save(file_path, "PNG")
+        if file_path and self.converted_image is not None:
+            self.converted_image.save(file_path, "PNG")
 
 
     def watch_file(self):
@@ -277,35 +279,39 @@ class ImageViewer(tk.Tk):
             self.zoom_out()
 
 
-# class ToolTip:
-#     def __init__(self, widget):
-#         self.widget = widget
-#         self.tip_window = None
+class ToolTip:
+    def __init__(self, widget):
+        self.widget = widget
+        self.tip_window = None
 
-#     def show(self, text, x, y):
-#         self.tip_window = tw = tk.Toplevel(self.widget)
-#         tw.wm_overrideredirect(True)  # Supprime la barre de titre
-#         tw.wm_geometry(f"+{x}+{y}")  # Positionne l'infobulle
+    def show(self, text, x, y):
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)  # Supprime la barre de titre
+        tw.wm_geometry(f"+{x}+{y}")  # Positionne l'infobulle
 
-#         label = tk.Label(tw, text=text, bg="white", relief="solid", borderwidth=1)
-#         label.pack()
+        label = tk.Label(tw, text=text, bg="white", relief="solid", borderwidth=1)
+        label.pack()
 
-#     def hide(self):
-#         if self.tip_window:
-#             self.tip_window.destroy()
-#             self.tip_window = None
+    def hide(self):
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
 
-# def on_color_hover(event, tooltip, colors):
-#     i = event.x // 16
-#     color = colors[i]
-#     tooltip.show(f"RGB: {color}", event.x_root + 20, event.y_root + 20)
+def on_color_hover(event, tooltip, colors):
+    tooltip.hide()
+    i = event.x // 16
+    color = colors[i]
+    tooltip.show(f"RGB: {color}", event.x_root + 20, event.y_root + 20)
 
-# def on_color_leave(event, tooltip):
-#     tooltip.hide()
+def on_color_leave(event, tooltip):
+    tooltip.hide()
 
-def display_palette(colors):
+def display_palette(root, colors):
+    if root is not None:
+        root.destroy()
+
     root = tk.Tk()
-    root.title("Palette de couleurs")
+    root.title("Color palette")
 
     canvas = tk.Canvas(root, width=16 * len(colors), height=16, bg="white")
     canvas.pack()
@@ -317,22 +323,13 @@ def display_palette(colors):
             fill="#%02x%02x%02x" % tuple(color)
         )
 
-#     tooltip = ToolTip(root)
+    tooltip = ToolTip(root)
 
-#     canvas.bind("<Motion>", lambda event: on_color_hover(event, tooltip, colors))
-#     canvas.bind("<Leave>", lambda event: on_color_leave(event, tooltip))
+    canvas.bind("<Motion>", lambda event: on_color_hover(event, tooltip, colors))
+    canvas.bind("<Leave>", lambda event: on_color_leave(event, tooltip))
 
-#     root.mainloop()
-
-# # Exemple d'utilisation
-# colors = [
-#     [255, 0, 0], [0, 255, 0], [0, 0, 255],
-#     # Ajoutez plus de couleurs RGB (8 bits par composante) ici
-# ]
-
-# quantized_colors = quantize_colors(colors)
-# display_palette(quantized_colors)
-
+    return root
+    
 
 
 if __name__ == "__main__":
