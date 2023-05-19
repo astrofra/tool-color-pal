@@ -1,4 +1,5 @@
 pillow
+psd-tools
 watchdog
 scikit-learn
 numpy

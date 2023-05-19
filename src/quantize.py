@@ -126,3 +126,70 @@ def png_24bit_to_indexed(input_img, representative_colors, progress_callback=pro
 
     # Return the indexed image
     return indexed_img
+
+def convert_color_to_rgb444(color):
+    r = (color[0] >> 4) & 0xF
+    g = (color[1] >> 4) & 0xF
+    b = (color[2] >> 4) & 0xF
+    return (r << 8) | (g << 4) | b
+
+def export_image_to_raw(image, filename):
+    width, height = image.size
+
+    # export image
+    with open(filename, "wb") as file:
+        pixels = image.load()
+
+        for row in range(height):
+            for col in range(width // 2):
+                pair_index = pixels[col * 2, row]
+                odd_index = pixels[col * 2 + 1, row]
+                byte = (pair_index << 4) | odd_index
+                file.write(byte.to_bytes(1, byteorder="big"))
+
+        for color in image.palette.colors:
+            rgb444 = convert_color_to_rgb444(color)
+            file.write(rgb444.to_bytes(2, byteorder="big"))
+
+    # debug
+    return load_raw_image(filename, width, height)
+
+# from PIL import Image
+
+def load_raw_image(filename, width, height):
+    with open(filename, "rb") as file:
+        image_data = file.read()
+
+    color_data = image_data[:width * height // 2]
+    palette_data = image_data[width * height // 2:]
+
+    palette = []
+    for i in range(0, len(palette_data), 2):
+        rgb444 = int.from_bytes(palette_data[i:i+2], byteorder="big")
+        r = ((rgb444 >> 8) & 0xF) << 4
+        g = ((rgb444 >> 4) & 0xF) << 4
+        b = (rgb444 & 0xF) << 4
+        palette.append((r, g, b))
+
+    image = Image.new("P", (width, height))
+    image.putpalette(palette)
+
+    pixels = list(image.getdata())
+
+    for i in range(0, len(color_data)):
+        byte = color_data[i]
+        pair_index = (byte >> 4) & 0xF
+        odd_index = byte & 0xF
+        pixels[i * 2] = pair_index
+        pixels[i * 2 + 1] = odd_index
+
+    image.putdata(pixels)
+    return image
+
+# # Exemple d'utilisation avec les informations de l'image
+# width = 320
+# height = 200
+
+# image = load_raw_image("image.raw", width, height)
+# image.save("image.png")  # Sauvegarder l'image chargée
+

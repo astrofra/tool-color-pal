@@ -6,7 +6,7 @@ from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, apply_dither_overlay, sort_palette_by_luminance
+from quantize import export_image_to_raw, png_24bit_to_indexed, build_color_list_from_image, quantize_colors, apply_dither_overlay, sort_palette_by_luminance
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -48,6 +48,9 @@ class ImageViewer(tk.Tk):
 
         file_menu.add_command(label="Save image", command=self.save_file, accelerator="Ctrl+S")
         self.bind_all("<Control-s>", self.save_file)
+
+        file_menu.add_command(label="Save image as RAW", command=self.save_file_as_raw, accelerator="Ctrl+Shift+S")
+        self.bind_all("<Control-Shift-s>", self.save_file_as_raw)
 
         # Operations
         control_frame = tk.Frame(self)
@@ -169,7 +172,14 @@ class ImageViewer(tk.Tk):
     def save_file(self, a=None):
         file_path = filedialog.asksaveasfilename(defaultextension=".png")
         if file_path and self.converted_image is not None:
-            self.converted_image.save(file_path, "PNG")
+            self.converted_image.save(file_path, format="PNG")
+
+    def save_file_as_raw(self, a=None):
+        file_path = filedialog.asksaveasfilename(defaultextension=".RAW")
+        if file_path and self.converted_image is not None:
+            self.converted_image = export_image_to_raw(self.converted_image, file_path)
+            self.display_image()
+
 
 
     def watch_file(self):
