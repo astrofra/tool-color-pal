@@ -6,7 +6,8 @@ from tkinter import filedialog, ttk
 from PIL import Image, ImageTk
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from quantize import export_image_to_raw, png_24bit_to_indexed, build_color_list_from_image, quantize_colors, apply_dither_overlay, sort_palette_by_luminance
+from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, apply_dither_overlay, sort_palette_by_luminance
+from raw import export_image_to_raw
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -54,7 +55,7 @@ class ImageViewer(tk.Tk):
 
         # Operations
         control_frame = tk.Frame(self)
-        control_frame.pack(side=tk.BOTTOM, pady=10)
+        control_frame.pack(side=tk.TOP, pady=10)
 
         # Zoom In/Out
         zoom_out_button = tk.Button(
@@ -70,7 +71,7 @@ class ImageViewer(tk.Tk):
         zoom_in_button.pack(side=tk.LEFT)
 
         self.label = tk.Label(self)
-        self.label.pack(expand=True, padx=20, pady=20)
+        self.label.pack(expand=True, padx=5, pady=0)
 
         # Separator
         separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
@@ -104,7 +105,7 @@ class ImageViewer(tk.Tk):
         dither_inc_button.pack(side=tk.LEFT)
 
         self.label = tk.Label(self)
-        self.label.pack(expand=True, padx=20, pady=20)
+        self.label.pack(expand=True, padx=5, pady=5)
 
         # Separator
         separator = tk.Canvas(control_frame, width=2, height=10, bg="gray")
@@ -139,7 +140,7 @@ class ImageViewer(tk.Tk):
             original_palette = build_color_list_from_image(self.original_image, self.update_progress_bar, 0, 20)
 
             self.update_progress_bar(30)
-            print(self.conversion_mode)
+            print("combo box conservion mode : " + self.conversion_mode.get())
             unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size)
 
             self.update_progress_bar(40)
@@ -177,8 +178,10 @@ class ImageViewer(tk.Tk):
     def save_file_as_raw(self, a=None):
         file_path = filedialog.asksaveasfilename(defaultextension=".RAW")
         if file_path and self.converted_image is not None:
-            self.converted_image = export_image_to_raw(self.converted_image, file_path)
-            self.display_image()
+            debug_image = export_image_to_raw(self.converted_image, file_path)
+            if debug_image is not None:
+                self.converted_image = debug_image
+                self.display_image() # for debug purpose
 
 
 
