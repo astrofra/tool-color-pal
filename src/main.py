@@ -322,7 +322,10 @@ def on_color_leave(event, tooltip):
 
 def display_palette(root, colors):
     if root is not None:
-        root.destroy()
+        try:
+            root.destroy()
+        except:
+            pass
 
     root = tk.Tk()
     root.title("Color palette")
