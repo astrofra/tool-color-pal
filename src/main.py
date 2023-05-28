@@ -166,6 +166,7 @@ class ImageViewer(tk.Tk):
         if file_name:
             self.file_path = file_name
             self.original_image = Image.open(file_name)
+            self.converted_image = None
             self.display_image()
             self.watch_file()
 
