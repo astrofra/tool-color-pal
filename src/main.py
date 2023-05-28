@@ -141,7 +141,7 @@ class ImageViewer(tk.Tk):
 
             self.update_progress_bar(30)
             print("combo box conservion mode : " + self.conversion_mode.get())
-            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size)
+            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size, self.conversion_mode.get())
 
             self.update_progress_bar(40)
             reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
@@ -313,8 +313,9 @@ class ToolTip:
 def on_color_hover(event, tooltip, colors):
     tooltip.hide()
     i = event.x // 16
-    color = colors[i]
-    tooltip.show(f"RGB: {color}", event.x_root + 20, event.y_root + 20)
+    if i < len(colors):
+        color = colors[i]
+        tooltip.show(f"RGB: {color}", event.x_root + 20, event.y_root + 20)
 
 def on_color_leave(event, tooltip):
     tooltip.hide()

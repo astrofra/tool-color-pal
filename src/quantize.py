@@ -1,5 +1,8 @@
 import numpy as np
+from operator import itemgetter
+from collections import defaultdict
 from sklearn.cluster import KMeans
+from collections import Counter
 from PIL import Image
 
 
@@ -17,6 +20,7 @@ def sort_palette_by_luminance(palette):
         return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
     return sorted(palette, key=luminance)
+
 
 def build_color_list_from_image(img, progress_callback=progress_callback_stub, pb_min=0, pb_max=100):
     if img is not None:
@@ -74,7 +78,96 @@ def apply_dither_overlay(img, luma_amplitude=0.05, progress_callback=progress_ca
     return Image.fromarray(np.uint8(img_data * 255))
 
 
-def quantize_colors(colors, n_colors=16):
+def quantize_colors(colors, n_colors=16, method="kmeans"):
+    if method.lower() == "kmeans":
+        return quantize_colors_kmeans(colors, n_colors)
+    if method.lower() == "median cut":
+        return quantize_colors_median_cut(colors, n_colors)
+    if method.lower() == "popularity":
+        return quantize_colors_popularity(colors, n_colors)
+
+
+from collections import Counter
+
+def quantize_colors_popularity(colors, n_colors=16):
+    # Normalize the colors
+    colors = np.array(colors, dtype=np.int32)
+
+    # We'll count the colors using a Counter, then select the most common ones
+    counter = Counter(map(tuple, colors))
+
+    # Initialize the list of representative colors
+    representative_colors = []
+
+    # Same loop as before, to handle possible color duplication due to quantization
+    requested_colors = n_colors
+    while len(representative_colors) < n_colors:
+        # Select the most common colors
+        representative_colors = [color for color, _ in counter.most_common(requested_colors)]
+
+        # Apply the same quantization
+        representative_colors = np.round(np.array(representative_colors) / 17) * 17
+        representative_colors = representative_colors.astype(int)
+
+        # Remove duplicates
+        representative_colors = np.unique(representative_colors, axis=0)
+        representative_colors = representative_colors.tolist()
+
+        requested_colors += 1
+
+    return representative_colors
+
+
+def quantize_colors_median_cut(colors, n_colors=16):
+    # Normalize the colors
+    colors = np.array(colors, dtype=np.int32)
+
+    # Let's start with the amount of colors that the user wants
+    representative_colors = []
+
+    # Initialize color_buckets with all colors in one bucket
+    color_buckets = [colors.tolist()]
+
+    # Same loop as before, to handle possible color duplication due to quantization
+    while len(representative_colors) < n_colors:
+        print("len(representative_colors) = " + str(len(representative_colors)))
+
+        # Find the longest color dimension in the bucket
+        longest_dim = max(range(3), key=lambda dim: max(colors[:,dim]) - min(colors[:,dim]))
+
+        # Select the bucket to split
+        # In this case, we choose the bucket with the most colors
+        largest_bucket_index = max(range(len(color_buckets)), key=lambda index: len(color_buckets[index]))
+        largest_bucket = color_buckets[largest_bucket_index]
+
+        # Sort the selected bucket along the longest dimension
+        largest_bucket.sort(key=itemgetter(longest_dim))
+
+        # Find the median color along the longest dimension
+        median_index = len(largest_bucket) // 2
+
+        # Split the bucket into two around the median color
+        color_buckets[largest_bucket_index] = largest_bucket[:median_index]
+        color_buckets.append(largest_bucket[median_index:])
+
+        # At this point, we have the desired number of color buckets
+        # We will now find the representative color for each bucket
+        # The representative color will be the average color in the bucket
+        representative_colors = [np.mean(bucket, axis=0) for bucket in color_buckets]
+
+        # Apply the same quantization
+        representative_colors = np.round(np.array(representative_colors) / 17) * 17
+        representative_colors = representative_colors.astype(int)
+
+        # Remove duplicates
+        representative_colors = np.unique(representative_colors, axis=0)
+        representative_colors = representative_colors.tolist()
+
+    return representative_colors
+
+
+
+def quantize_colors_kmeans(colors, n_colors=16):
     # Normalize the colors
     colors = np.array(colors, dtype=np.float64) / 255
 
