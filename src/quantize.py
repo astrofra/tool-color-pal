@@ -64,19 +64,19 @@ def apply_dither_overlay(img, luma_amplitude=0.05, progress_callback=progress_ca
     return Image.fromarray(np.uint8(img_data * 255))
 
 
-def quantize_colors(colors, n_colors=16, method="kmeans"):
+def quantize_colors(colors, n_colors=16, method="kmeans", bits_per_gun=4):
     if method.lower() == "kmeans":
-        return quantize_colors_kmeans(colors, n_colors)
+        return quantize_colors_kmeans(colors, n_colors, bits_per_gun)
     if method.lower() == "median cut":
-        return quantize_colors_median_cut(colors, n_colors)
+        return quantize_colors_median_cut(colors, n_colors, bits_per_gun)
     if method.lower() == "popularity":
-        return quantize_colors_popularity(colors, n_colors)
+        return quantize_colors_popularity(colors, n_colors, bits_per_gun)
     if method.lower() == "mmcq":
-        return quantize_colors_mmcq(colors, n_colors)
+        return quantize_colors_mmcq(colors, n_colors, bits_per_gun)
     if method.lower() == "kmeans + mmcq":
-        return quantize_colors_kmeans_mmcq(colors, n_colors)
+        return quantize_colors_kmeans_mmcq(colors, n_colors, bits_per_gun)
     if method.lower() == "kmeans + median cut":
-        return quantize_colors_kmeans_median_cut(colors, n_colors)
+        return quantize_colors_kmeans_median_cut(colors, n_colors, bits_per_gun)
 
 
 def halve_palette(colors, num_clusters=None):
@@ -97,19 +97,22 @@ def halve_palette(colors, num_clusters=None):
     return new_colors.tolist()
 
 
-def quantize_colors_kmeans_median_cut(colors, n_colors):
-    kmeans_palette = quantize_colors_kmeans(colors, n_colors)
-    median_palette = quantize_colors_median_cut(colors, n_colors)
+def quantize_colors_kmeans_median_cut(colors, n_colors, bits_per_gun=4):
+    kmeans_palette = quantize_colors_kmeans(colors, n_colors, bits_per_gun)
+    median_palette = quantize_colors_median_cut(colors, n_colors, bits_per_gun)
     return halve_palette(kmeans_palette + median_palette)
 
 
-def quantize_colors_kmeans_mmcq(colors, n_colors=16):
-    kmeans_palette = quantize_colors_kmeans(colors, n_colors)
-    mmcq_palette = quantize_colors_mmcq(colors, n_colors)
+def quantize_colors_kmeans_mmcq(colors, n_colors=16, bits_per_gun=4):
+    kmeans_palette = quantize_colors_kmeans(colors, n_colors, bits_per_gun)
+    mmcq_palette = quantize_colors_mmcq(colors, n_colors, bits_per_gun)
     return halve_palette(kmeans_palette + mmcq_palette)
 
 
-def quantize_colors_mmcq(colors, n_colors=16):
+def quantize_colors_mmcq(colors, n_colors=16, bits_per_gun=4):
+    # how many shades per component ?
+    color_shades = (1 << (8 - bits_per_gun)) + 1
+
     # Normalize the colors
     colors = np.array(colors, dtype=np.int32)
     colors = [tuple(x) for x in colors]
@@ -124,7 +127,8 @@ def quantize_colors_mmcq(colors, n_colors=16):
         representative_colors = np.array(MMCQ.quantize(colors, requested_colors).palette)
 
         # Apply the same quantization
-        representative_colors = np.round(np.array(representative_colors) / 17) * 17
+        representative_colors = np.round(np.array(representative_colors) / color_shades) * color_shades
+        representative_colors = representative_colors.clip(0, 255)
         representative_colors = representative_colors.astype(int)
 
         # Remove duplicates
@@ -138,7 +142,10 @@ def quantize_colors_mmcq(colors, n_colors=16):
     return representative_colors
 
 
-def quantize_colors_popularity(colors, n_colors=16):
+def quantize_colors_popularity(colors, n_colors=16, bits_per_gun=4):
+    # how many shades per component ?
+    color_shades = (1 << (8 - bits_per_gun)) + 1
+
     # Normalize the colors
     colors = np.array(colors, dtype=np.int32)
 
@@ -157,7 +164,8 @@ def quantize_colors_popularity(colors, n_colors=16):
         representative_colors = [color for color, _ in counter.most_common(requested_colors)]
 
         # Apply the same quantization
-        representative_colors = np.round(np.array(representative_colors) / 17) * 17
+        representative_colors = np.round(np.array(representative_colors) / color_shades) * color_shades
+        representative_colors = representative_colors.clip(0, 255)
         representative_colors = representative_colors.astype(int)
 
         # Remove duplicates
@@ -168,7 +176,10 @@ def quantize_colors_popularity(colors, n_colors=16):
 
     return halve_palette(representative_colors)
 
-def quantize_colors_median_cut(colors, n_colors=16):
+def quantize_colors_median_cut(colors, n_colors=16, bits_per_gun=4):
+    # how many shades per component ?
+    color_shades = (1 << (8 - bits_per_gun)) + 1
+
     # Normalize the colors
     colors = np.array(colors, dtype=np.int32)
 
@@ -203,7 +214,8 @@ def quantize_colors_median_cut(colors, n_colors=16):
         representative_colors_temp = [np.mean(np.array(bucket), axis=0) for bucket in color_buckets]
 
         # Apply the same quantization
-        representative_colors_temp = np.round(np.array(representative_colors_temp) / 17) * 17
+        representative_colors_temp = np.round(np.array(representative_colors_temp) / color_shades) * color_shades
+        representative_colors_temp = representative_colors_temp.clip(0, 255)
         representative_colors_temp = representative_colors_temp.astype(int)
 
         # Remove duplicates
@@ -213,7 +225,21 @@ def quantize_colors_median_cut(colors, n_colors=16):
     return representative_colors
 
 
-def quantize_colors_kmeans(colors, n_colors=16):
+def shift_bits_per_component(colors, bits):
+    colors_out = []
+    for c in colors:
+        r, g, b = int(c[0]), int(c[1]), int(c[2])
+        r = min(max((r >> bits), 0) << bits, 255)
+        g = min(max((g >> bits), 0) << bits, 255)
+        b = min(max((b >> bits), 0) << bits, 255)
+        colors_out.append([r, g, b])
+    return colors_out
+        
+
+def quantize_colors_kmeans(colors, n_colors=16, bits_per_gun=4):
+    # how many shades per component ?
+    color_shades = (1 << (8 - bits_per_gun)) + 1
+
     # Normalize the colors
     colors = np.array(colors, dtype=np.float64) / 255
 
@@ -229,8 +255,8 @@ def quantize_colors_kmeans(colors, n_colors=16):
         # print("requested_colors = " + str(requested_colors))
         kmeans = KMeans(n_clusters=requested_colors, random_state=42).fit(colors)
         representative_colors = kmeans.cluster_centers_ * 255
-        representative_colors = np.round(representative_colors / 17) * 17
-        representative_colors = representative_colors
+        representative_colors = np.round(representative_colors / color_shades) * color_shades
+        representative_colors = representative_colors.clip(0, 255)
         representative_colors = representative_colors.astype(int)
         representative_colors = np.unique(representative_colors, axis=0)
         representative_colors = representative_colors.tolist()

@@ -141,7 +141,7 @@ class ImageViewer(tk.Tk):
 
             self.update_progress_bar(30)
             print("combo box conservion mode : " + self.conversion_mode.get())
-            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size, self.conversion_mode.get())
+            unsorted_reduced_palette = quantize_colors(original_palette, self.palette_size, self.conversion_mode.get(), 4)
 
             self.update_progress_bar(40)
             reduced_palette = sort_palette_by_luminance(unsorted_reduced_palette)
