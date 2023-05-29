@@ -73,6 +73,10 @@ def quantize_colors(colors, n_colors=16, method="kmeans"):
         return quantize_colors_popularity(colors, n_colors)
     if method.lower() == "mmcq":
         return quantize_colors_mmcq(colors, n_colors)
+    if method.lower() == "kmeans + mmcq":
+        return quantize_colors_kmeans_mmcq(colors, n_colors)
+    if method.lower() == "kmeans + median cut":
+        return quantize_colors_kmeans_median_cut(colors, n_colors)
 
 
 def halve_palette(colors, num_clusters=None):
@@ -91,6 +95,18 @@ def halve_palette(colors, num_clusters=None):
 
     # Return as a list
     return new_colors.tolist()
+
+
+def quantize_colors_kmeans_median_cut(colors, n_colors):
+    kmeans_palette = quantize_colors_kmeans(colors, n_colors)
+    median_palette = quantize_colors_median_cut(colors, n_colors)
+    return halve_palette(kmeans_palette + median_palette)
+
+
+def quantize_colors_kmeans_mmcq(colors, n_colors=16):
+    kmeans_palette = quantize_colors_kmeans(colors, n_colors)
+    mmcq_palette = quantize_colors_mmcq(colors, n_colors)
+    return halve_palette(kmeans_palette + mmcq_palette)
 
 
 def quantize_colors_mmcq(colors, n_colors=16):
@@ -126,6 +142,8 @@ def quantize_colors_popularity(colors, n_colors=16):
     # Normalize the colors
     colors = np.array(colors, dtype=np.int32)
 
+    n_colors *= 2
+
     # We'll count the colors using a Counter, then select the most common ones
     counter = Counter(map(tuple, colors))
 
@@ -148,7 +166,7 @@ def quantize_colors_popularity(colors, n_colors=16):
 
         requested_colors += 1
 
-    return representative_colors
+    return halve_palette(representative_colors)
 
 def quantize_colors_median_cut(colors, n_colors=16):
     # Normalize the colors

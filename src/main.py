@@ -27,7 +27,7 @@ class ImageViewer(tk.Tk):
         self.palette_root = None
         
         self.conversion_mode = tk.StringVar(value="Kmeans")
-        self.mode_options = ["Kmeans", "MMCQ", "Median Cut", "Popularity"]
+        self.mode_options = ["Kmeans", "MMCQ", "Kmeans + MMCQ", "Median Cut", "Kmeans + Median Cut", "Popularity"]
         
         self.file_path = None
         self.file_observer = None
