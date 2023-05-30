@@ -8,6 +8,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from quantize import png_24bit_to_indexed, build_color_list_from_image, quantize_colors, apply_dither_overlay, sort_palette_by_luminance
 from raw import export_image_to_raw
+from plot import plot_colors
 
 class ImageViewer(tk.Tk):
     def __init__(self):
@@ -25,6 +26,7 @@ class ImageViewer(tk.Tk):
                              2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
         
         self.palette_root = None
+        self.plot3d = None
         
         self.conversion_mode = tk.StringVar(value="Kmeans")
         self.mode_options = ["Kmeans", "MMCQ", "Kmeans + MMCQ", "Median Cut", "Kmeans + Median Cut", "Popularity"]
@@ -155,6 +157,7 @@ class ImageViewer(tk.Tk):
 
             self.update_progress_bar(90)
             self.palette_root = display_palette(self.palette_root, reduced_palette)
+            self.plot3d = plot_colors(reduced_palette)
 
             self.update_progress_bar(100)
             self.display_image()
